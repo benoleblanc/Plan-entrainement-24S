@@ -54,7 +54,8 @@ function renderWeekSelector() {
 
   state.weeks.forEach(week => {
     const btn = document.createElement('button')
-    btn.className = `week-btn ${state.currentWeek === week.id ? 'active' : ''}`
+    const completed = week.daily67.every(Boolean) && week.training.every(Boolean)
+    btn.className = `week-btn ${state.currentWeek === week.id ? 'active' : ''} ${completed ? 'completed' : ''}`
     btn.textContent = `S${week.id}`
     btn.onclick = () => {
       state.currentWeek = week.id
@@ -157,6 +158,7 @@ function toggleTask(type, index) {
 
   saveState()
   renderActiveWeek()
+  renderWeekSelector()
 }
 
 function checkWeeklyCompletion() {

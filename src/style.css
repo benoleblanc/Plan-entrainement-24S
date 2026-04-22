@@ -158,6 +158,13 @@ p { font-size: 0.85rem; line-height: 1.4; color: var(--text-muted); }
   box-shadow: 0 4px 12px rgba(74, 103, 65, 0.2);
 }
 
+.week-btn.completed {
+  background: var(--secondary);
+  border-color: var(--secondary);
+  color: white;
+  box-shadow: 0 4px 12px rgba(168, 124, 81, 0.2);
+}
+
 /* Modal for Exercises */
 .modal {
   position: fixed;
