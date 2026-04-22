@@ -28,7 +28,8 @@ const elements = {
     effort: document.getElementById('effort'),
     recovery: document.getElementById('recovery')
   },
-  wakeLockToggle: document.getElementById('wake-lock-toggle')
+  wakeLockToggle: document.getElementById('wake-lock-toggle'),
+  totalTime: document.getElementById('total-time')
 };
 
 // Controls
@@ -36,6 +37,7 @@ window.increment = (id) => {
   const input = elements.inputs[id];
   const step = id === 'cycles' ? 1 : 0.5;
   input.value = (parseFloat(input.value) + step).toString();
+  updateTotalTime();
 };
 
 window.decrement = (id) => {
@@ -45,6 +47,7 @@ window.decrement = (id) => {
   const newValue = parseFloat(input.value) - step;
   if (newValue >= min) {
     input.value = newValue.toString();
+    updateTotalTime();
   }
 };
 
@@ -140,6 +143,28 @@ function updateDisplay() {
   // Visual feedback
   document.body.className = `theme-${currentPhase}`;
 }
+
+function updateTotalTime() {
+  const warmup = parseFloat(elements.inputs.warmup.value) || 0;
+  const cycles = parseInt(elements.inputs.cycles.value) || 0;
+  const effort = parseFloat(elements.inputs.effort.value) || 0;
+  const recovery = parseFloat(elements.inputs.recovery.value) || 0;
+
+  const totalMinutes = warmup + (cycles * (effort + recovery));
+  
+  const mins = Math.floor(totalMinutes);
+  const secs = Math.round((totalMinutes - mins) * 60);
+  
+  elements.totalTime.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Initial total time calculation
+updateTotalTime();
+
+// Listen for manual input changes
+Object.values(elements.inputs).forEach(input => {
+  input.addEventListener('input', updateTotalTime);
+});
 
 function playTone(freq, duration) {
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
