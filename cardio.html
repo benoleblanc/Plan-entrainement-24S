@@ -61,7 +61,15 @@
           </div>
         </div>
 
-        <button id="start-btn" class="btn-primary" style="width: 100%; margin-top: 2rem; padding: 1rem; font-size: 1.2rem;">
+        <div class="setup-group" style="flex-direction: row; align-items: center; justify-content: space-between; background: rgba(74, 103, 65, 0.05); padding: 1rem; border-radius: 0.75rem; margin-top: 1rem;">
+          <label style="margin-bottom: 0; cursor: pointer;" for="wake-lock-toggle">Garder l'écran allumé</label>
+          <label class="switch">
+            <input type="checkbox" id="wake-lock-toggle">
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        <button id="start-btn" class="btn-primary" style="width: 100%; margin-top: 1rem; padding: 1rem; font-size: 1.2rem;">
           Commencer
         </button>
       </main>

@@ -5,6 +5,7 @@ let currentPhase = 'warmup'; // warmup, effort, recovery
 let currentCycle = 1;
 let totalCycles = 8;
 let timeLeft = 0;
+let wakeLock = null;
 
 const elements = {
   setup: document.getElementById('timer-setup'),
@@ -20,7 +21,8 @@ const elements = {
     cycles: document.getElementById('cycles'),
     effort: document.getElementById('effort'),
     recovery: document.getElementById('recovery')
-  }
+  },
+  wakeLockToggle: document.getElementById('wake-lock-toggle')
 };
 
 // Controls
@@ -51,6 +53,7 @@ elements.pauseBtn.onclick = () => {
 
 elements.stopBtn.onclick = () => {
   clearInterval(timer);
+  releaseWakeLock();
   elements.active.style.display = 'none';
   elements.setup.style.display = 'block';
 };
@@ -67,6 +70,10 @@ function startTimer() {
   elements.active.style.display = 'flex';
   
   updateDisplay();
+  
+  if (elements.wakeLockToggle.checked) {
+    requestWakeLock();
+  }
   
   timer = setInterval(() => {
     if (isPaused) return;
@@ -102,6 +109,7 @@ function nextPhase() {
       playTone(880, 0.5);
     } else {
       clearInterval(timer);
+      releaseWakeLock();
       alert('Entraînement terminé ! Félicitations !');
       elements.active.style.display = 'none';
       elements.setup.style.display = 'block';
@@ -142,3 +150,35 @@ function playTone(freq, duration) {
   oscillator.start();
   oscillator.stop(audioCtx.currentTime + duration);
 }
+
+// Wake Lock Logic
+async function requestWakeLock() {
+  if ('wakeLock' in navigator) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+    } catch (err) {
+      console.error(`${err.name}, ${err.message}`);
+    }
+  }
+}
+
+function releaseWakeLock() {
+  if (wakeLock !== null) {
+    wakeLock.release();
+    wakeLock = null;
+  }
+}
+
+elements.wakeLockToggle.onchange = (e) => {
+  if (e.target.checked && elements.setup.style.display === 'none') {
+    requestWakeLock();
+  } else if (!e.target.checked) {
+    releaseWakeLock();
+  }
+};
+
+document.addEventListener('visibilitychange', async () => {
+  if (wakeLock !== null && document.visibilityState === 'visible') {
+    await requestWakeLock();
+  }
+});
