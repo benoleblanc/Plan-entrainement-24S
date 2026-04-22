@@ -7,6 +7,12 @@ let totalCycles = 8;
 let timeLeft = 0;
 let wakeLock = null;
 
+const PHASE_LABELS = {
+  warmup: 'Échauffement',
+  effort: 'Effort',
+  recovery: 'Récupération'
+};
+
 const elements = {
   setup: document.getElementById('timer-setup'),
   active: document.getElementById('timer-active'),
@@ -122,7 +128,7 @@ function updateDisplay() {
   const secs = timeLeft % 60;
   elements.clock.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   
-  elements.phase.textContent = currentPhase.toUpperCase();
+  elements.phase.textContent = PHASE_LABELS[currentPhase].toUpperCase();
   elements.phase.className = `phase-badge ${currentPhase}`;
   
   if (currentPhase === 'warmup') {
