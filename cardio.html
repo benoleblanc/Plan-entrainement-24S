@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cardio Intervalles - Plan 24S</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2d5a27">
+  <link rel="stylesheet" href="src/style.css">
+</head>
+
+<body>
+  <div id="app">
+    <div class="container">
+      <header class="hero">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
+          <a href="index.html" style="color: var(--text-main); text-decoration: none;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+          </a>
+          <h1>Cardio Intervalles</h1>
+        </div>
+      </header>
+
+      <main id="timer-setup" class="timer-setup-card glass">
+        <div class="setup-group">
+          <label>Échauffement (min)</label>
+          <div class="input-control">
+            <button onclick="decrement('warmup')">-</button>
+            <input type="number" id="warmup" value="5" min="1" max="30">
+            <button onclick="increment('warmup')">+</button>
+          </div>
+        </div>
+
+        <div class="setup-group">
+          <label>Nombre de cycles</label>
+          <div class="input-control">
+            <button onclick="decrement('cycles')">-</button>
+            <input type="number" id="cycles" value="8" min="1" max="20">
+            <button onclick="increment('cycles')">+</button>
+          </div>
+        </div>
+
+        <div class="setup-group">
+          <label>Effort soutenu (min)</label>
+          <div class="input-control">
+            <button onclick="decrement('effort')">-</button>
+            <input type="number" id="effort" value="1" min="1" max="10">
+            <button onclick="increment('effort')">+</button>
+          </div>
+        </div>
+
+        <div class="setup-group">
+          <label>Récupération (min)</label>
+          <div class="input-control">
+            <button onclick="decrement('recovery')">-</button>
+            <input type="number" id="recovery" value="2" min="1" max="10">
+            <button onclick="increment('recovery')">+</button>
+          </div>
+        </div>
+
+        <button id="start-btn" class="btn-primary" style="width: 100%; margin-top: 2rem; padding: 1rem; font-size: 1.2rem;">
+          Commencer
+        </button>
+      </main>
+
+      <main id="timer-active" class="timer-display-card glass" style="display: none;">
+        <div id="phase-indicator" class="phase-badge">ÉCHAUFFEMENT</div>
+        <div id="cycle-display" class="cycle-text">Cycle 0/8</div>
+        <div id="timer-clock" class="timer-clock">05:00</div>
+        
+        <div class="timer-controls">
+          <button id="pause-btn" class="btn-secondary">Pause</button>
+          <button id="stop-btn" class="btn-danger">Arrêter</button>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module" src="src/cardio.js"></script>
+</body>
+
+</html>

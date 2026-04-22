@@ -113,6 +113,12 @@ function renderActiveWeek() {
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
           </button>
         ` : ''}
+        ${prog.id === 'hiit' ? `
+          <a href="cardio.html" class="btn-info" style="text-decoration: none;">
+            <span>Minuteur</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </a>
+        ` : ''}
         <div class="task-item ${checked ? 'checked' : ''}" style="flex-shrink: 0; padding: 0.5rem;" onclick="window.toggleTask('training', ${idx})">
           <div class="checkbox-visual">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
