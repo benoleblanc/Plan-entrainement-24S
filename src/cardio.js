@@ -26,13 +26,17 @@ const elements = {
 // Controls
 window.increment = (id) => {
   const input = elements.inputs[id];
-  input.value = parseInt(input.value) + 1;
+  const step = id === 'cycles' ? 1 : 0.5;
+  input.value = (parseFloat(input.value) + step).toString();
 };
 
 window.decrement = (id) => {
   const input = elements.inputs[id];
-  if (parseInt(input.value) > parseInt(input.getAttribute('min'))) {
-    input.value = parseInt(input.value) - 1;
+  const step = id === 'cycles' ? 1 : 0.5;
+  const min = parseFloat(input.getAttribute('min'));
+  const newValue = parseFloat(input.value) - step;
+  if (newValue >= min) {
+    input.value = newValue.toString();
   }
 };
 
@@ -52,7 +56,7 @@ elements.stopBtn.onclick = () => {
 };
 
 function startTimer() {
-  const warmup = parseInt(elements.inputs.warmup.value) * 60;
+  const warmup = Math.round(parseFloat(elements.inputs.warmup.value) * 60);
   totalCycles = parseInt(elements.inputs.cycles.value);
   
   currentPhase = 'warmup';
@@ -78,8 +82,8 @@ function startTimer() {
 }
 
 function nextPhase() {
-  const effort = parseInt(elements.inputs.effort.value) * 60;
-  const recovery = parseInt(elements.inputs.recovery.value) * 60;
+  const effort = Math.round(parseFloat(elements.inputs.effort.value) * 60);
+  const recovery = Math.round(parseFloat(elements.inputs.recovery.value) * 60);
 
   if (currentPhase === 'warmup') {
     currentPhase = 'effort';
