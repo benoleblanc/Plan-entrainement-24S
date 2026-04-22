@@ -1,0 +1,16 @@
+{
+  "name": "Mon Plan Entraînement 24S",
+  "short_name": "Plan 24S",
+  "description": "Suivi de mon plan d'entraînement de 24 semaines",
+  "start_url": "/Plan-entrainement-24S/",
+  "display": "standalone",
+  "background_color": "#f8f9fa",
+  "theme_color": "#2d5a27",
+  "icons": [
+    {
+      "src": "favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

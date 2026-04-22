@@ -8,6 +8,9 @@
   <title>Mon Plan Entraînement - 24S</title>
   <meta name="description"
     content="Suivi personnalisé du plan d'entraînement de 24 semaines pour atteindre ses objectifs santé." />
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2d5a27">
 </head>
 
 <body>
@@ -15,23 +18,9 @@
     <div class="container">
       <!-- Hero Section -->
       <header class="hero">
-        <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
           <img src="favicon.png" alt="Logo" style="width: 32px; height: 32px; border-radius: 8px;">
-          <h1>Corse 2026</h1>
-        </div>
-        <div class="metrics-grid">
-          <div class="metric-card">
-            <span class="metric-value">HbA1c</span>
-            <span class="metric-label">&lt; 5.5</span>
-          </div>
-          <div class="metric-card">
-            <span class="metric-value">IMC</span>
-            <span class="metric-label">&lt; 25</span>
-          </div>
-          <div class="metric-card">
-            <span class="metric-value">WHtR</span>
-            <span class="metric-label">&lt; 0.53</span>
-          </div>
+          <h1>Suivi de mon plan d'entrainement 24S</h1>
         </div>
       </header>
 
@@ -91,6 +80,13 @@
 
   <script type="module" src="src/main.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js');
+      });
+    }
+  </script>
 </body>
 
 </html>
