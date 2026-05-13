@@ -15,7 +15,8 @@ let state = {
   weeks: Array.from({ length: TOTAL_WEEKS }, (_, i) => ({
     id: i + 1,
     daily67: [false, false, false, false, false, false],
-    training: [false, false, false, false]
+    training: [false, false, false, false],
+    manualComplete: false
   }))
 }
 
@@ -28,6 +29,10 @@ function loadState() {
   const saved = localStorage.getItem('corsica_tracker_state')
   if (saved) {
     state = JSON.parse(saved)
+    // Migration
+    state.weeks.forEach(week => {
+      if (week.manualComplete === undefined) week.manualComplete = false
+    })
   }
 }
 
@@ -54,8 +59,10 @@ function renderWeekSelector() {
 
   state.weeks.forEach(week => {
     const btn = document.createElement('button')
-    const completed = week.daily67.every(Boolean) && week.training.every(Boolean)
-    btn.className = `week-btn ${state.currentWeek === week.id ? 'active' : ''} ${completed ? 'completed' : ''}`
+    const fullyCompleted = week.daily67.every(Boolean) && week.training.every(Boolean)
+    const statusClass = fullyCompleted ? 'completed' : (week.manualComplete ? 'manual-completed' : '')
+    
+    btn.className = `week-btn ${state.currentWeek === week.id ? 'active' : ''} ${statusClass}`
     btn.textContent = `S${week.id}`
     btn.onclick = () => {
       state.currentWeek = week.id
@@ -131,7 +138,34 @@ function renderActiveWeek() {
     trainingContainer.appendChild(row)
   })
 
+  // Render Manual Completion Section
+  renderManualCompletion(weekData)
+
   calculateProgress()
+}
+
+function renderManualCompletion(weekData) {
+  let container = document.getElementById('manual-completion-container')
+  if (!container) {
+    const section = document.createElement('section')
+    section.className = 'section-card glass'
+    section.style.marginTop = '1rem'
+    section.innerHTML = `
+      <div id="manual-completion-container"></div>
+    `
+    document.querySelector('.dashboard-grid').appendChild(section)
+    container = document.getElementById('manual-completion-container')
+  }
+
+  const checked = weekData.manualComplete
+  container.innerHTML = `
+    <div class="task-item ${checked ? 'checked-manual' : ''}" style="flex-direction: row; justify-content: flex-start; gap: 1rem; padding: 1rem;" onclick="window.toggleManualComplete()">
+      <div class="checkbox-visual ${checked ? 'manual' : ''}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      </div>
+      <span class="task-label" style="font-size: 0.9rem; color: var(--text-main);">Terminer cette semaine même si elle n’est pas complète</span>
+    </div>
+  `
 }
 
 // Modal Logic
@@ -154,6 +188,29 @@ function toggleTask(type, index) {
 
   if (weekData[type][index]) {
     checkWeeklyCompletion()
+  }
+
+  saveState()
+  renderActiveWeek()
+  renderWeekSelector()
+}
+
+window.toggleManualComplete = () => {
+  const weekData = state.weeks.find(w => w.id === state.currentWeek)
+  weekData.manualComplete = !weekData.manualComplete
+  
+  if (weekData.manualComplete) {
+    // If we manually complete, and it's not the last week, we could offer to go to next week
+    // but the requirement says "permettre de passer à la semaine suivante", which it already does by clicking the selector.
+    // Maybe we should auto-scroll/select the next week?
+    // "Après cette action, l’application doit permettre de passer à la semaine suivante."
+    // It's already possible. But let's make it easy.
+    
+    // Check if not the last week
+    if (state.currentWeek < TOTAL_WEEKS) {
+       // We don't automatically switch because the user might want to stay, 
+       // but the buttons are there.
+    }
   }
 
   saveState()

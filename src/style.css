@@ -12,6 +12,7 @@
   --border: #e5e7eb;
   --glass-border: rgba(74, 103, 65, 0.1);
   --font-main: 'Outfit', sans-serif;
+  --manual-completed: #577399; /* Slate Blue */
   --transition: all 0.25s ease;
   --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
@@ -157,12 +158,18 @@ p { font-size: 0.85rem; line-height: 1.4; color: var(--text-muted); }
   color: white;
   box-shadow: 0 4px 12px rgba(74, 103, 65, 0.2);
 }
-
 .week-btn.completed {
   background: var(--secondary);
   border-color: var(--secondary);
   color: white;
   box-shadow: 0 4px 12px rgba(168, 124, 81, 0.2);
+}
+ 
+.week-btn.manual-completed {
+  background: var(--manual-completed);
+  border-color: var(--manual-completed);
+  color: white;
+  box-shadow: 0 4px 12px rgba(87, 115, 153, 0.2);
 }
 
 /* Modal for Exercises */
@@ -281,6 +288,11 @@ p { font-size: 0.85rem; line-height: 1.4; color: var(--text-muted); }
   border-color: var(--primary);
 }
 
+.task-item.checked-manual {
+  background: rgba(87, 115, 153, 0.08);
+  border-color: var(--manual-completed);
+}
+
 .checkbox-visual {
   width: 20px;
   height: 20px;
@@ -297,6 +309,11 @@ p { font-size: 0.85rem; line-height: 1.4; color: var(--text-muted); }
   border-color: var(--primary);
 }
 
+.checkbox-visual.manual {
+  background: var(--manual-completed);
+  border-color: var(--manual-completed);
+}
+
 .checkbox-visual svg {
   width: 14px;
   height: 14px;
@@ -307,6 +324,11 @@ p { font-size: 0.85rem; line-height: 1.4; color: var(--text-muted); }
 }
 
 .task-item.checked .checkbox-visual svg {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.task-item.checked-manual .checkbox-visual svg {
   opacity: 1;
   transform: scale(1);
 }
