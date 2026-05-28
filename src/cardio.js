@@ -91,6 +91,12 @@ function startTimer() {
     
     if (timeLeft < 0) {
       nextPhase();
+    } else {
+      // Bip d'avertissement pour les 5 dernières secondes (4, 3, 2, 1, 0)
+      if (timeLeft <= 4 && (currentPhase === 'warmup' || currentPhase === 'effort' || currentPhase === 'recovery')) {
+        const toneFreq = currentPhase === 'effort' ? 440 : 880;
+        playTone(toneFreq, 0.1);
+      }
     }
     
     updateDisplay();
