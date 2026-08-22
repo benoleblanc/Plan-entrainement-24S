@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jeu de Taquin - Plan 24S</title>
+  <meta name="description" content="Un petit jeu de taquin (puzzle à glissières) pour faire une pause." />
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2d5a27">
+  <link rel="stylesheet" href="src/style.css">
+  <link rel="stylesheet" href="src/puzzle.css">
+</head>
+
+<body>
+  <div id="app">
+    <div class="container">
+      <header class="hero">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
+          <a href="index.html" style="color: var(--text-main); text-decoration: none;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+          </a>
+          <h1>Jeu de Taquin</h1>
+        </div>
+        <p>Remets les numéros dans l'ordre pour gagner.</p>
+      </header>
+
+      <main class="puzzle-card glass">
+        <div class="puzzle-toolbar">
+          <div class="puzzle-size-select" id="size-select" role="group" aria-label="Taille de la grille">
+            <button type="button" class="size-btn" data-size="3">3×3</button>
+            <button type="button" class="size-btn active" data-size="4">4×4</button>
+            <button type="button" class="size-btn" data-size="5">5×5</button>
+          </div>
+        </div>
+
+        <div class="puzzle-stats">
+          <div class="stat-card">
+            <span class="stat-value" id="moves-count">0</span>
+            <span class="stat-label">Coups</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value" id="timer-display">00:00</span>
+            <span class="stat-label">Temps</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value" id="best-score">--</span>
+            <span class="stat-label">Meilleur</span>
+          </div>
+        </div>
+
+        <div class="puzzle-board-wrapper">
+          <div id="puzzle-board" class="puzzle-board" data-size="4"></div>
+
+          <div id="win-overlay" class="win-overlay">
+            <div class="win-content">
+              <div class="win-emoji">🎉</div>
+              <h2>Bravo !</h2>
+              <p id="win-summary">Résolu en 0 coups, en 00:00.</p>
+              <button id="win-replay-btn" class="btn-primary">Rejouer</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="puzzle-actions">
+          <button id="shuffle-btn" class="btn-primary">Nouvelle partie</button>
+          <button id="reset-btn" class="btn-secondary">Recommencer</button>
+        </div>
+
+        <p class="puzzle-hint">
+          Astuce : clique ou touche une case adjacente à la case vide pour la déplacer.
+          Sur ordinateur, les flèches du clavier fonctionnent aussi.
+        </p>
+      </main>
+    </div>
+  </div>
+
+  <script type="module" src="src/puzzle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</body>
+
+</html>

@@ -7,7 +7,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: 'index.html',
-        cardio: 'cardio.html'
+        cardio: 'cardio.html',
+        puzzle: 'puzzle.html'
       }
     }
   }
