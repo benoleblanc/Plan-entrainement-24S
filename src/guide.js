@@ -12,6 +12,12 @@ const WARMUP_S = 300
 const TRANSITION_S = 15
 const ZONE2_RANGE = [20, 30]
 const COOLDOWN_RANGE = [3, 5]
+const BREATH_OPTIONS = [3, 5, 10] // respiration finale : minutes
+const BREATH_PHASE_S = 5 // 5 s d'inspiration, 5 s d'expiration
+const BREATH_VOICE_PHASES = 6 // la voix guide les trois premiers cycles, ensuite seulement des sons doux
+const BREATH_SCALE = [0.5, 1]
+const BREATH_INTRO = 'Pour terminer, quelques minutes de respiration lente. Installe-toi confortablement, assis ou couché, et relâche les épaules. Inspire cinq secondes par le nez, puis expire cinq secondes, doucement.'
+const BREATH_OUTRO = 'Termine doucement. Reprends une respiration normale.'
 
 const DEFAULT_SETTINGS = {
   voiceName: '',
@@ -25,7 +31,9 @@ const DEFAULT_SETTINGS = {
   amounts: {},
   described: {},
   zone2: 25, // elliptique : minutes en Zone 2
-  cooldown: 4 // elliptique : minutes de retour au calme
+  cooldown: 4, // elliptique : minutes de retour au calme
+  breath: true, // séance complète : respiration lente à la fin
+  breathMin: 5
 }
 
 const param = name => {
@@ -170,6 +178,25 @@ function beep(freq, dur) {
   } catch (e) { /* ignoré */ }
 }
 
+// Son doux (attaque et fin progressives) pour rythmer la respiration sans voix
+function chime(freq, dur) {
+  if (!settings.beep || !audioCtx) return
+  try {
+    const t = audioCtx.currentTime
+    const o = audioCtx.createOscillator()
+    const g = audioCtx.createGain()
+    o.type = 'sine'
+    o.frequency.value = freq
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.exponentialRampToValueAtTime(0.1, t + 0.08)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
+    o.connect(g)
+    g.connect(audioCtx.destination)
+    o.start(t)
+    o.stop(t + dur)
+  } catch (e) { /* ignoré */ }
+}
+
 let wakeLock = null
 
 async function lockScreen() {
@@ -253,6 +280,13 @@ const OVERLAY_HTML = `
         <label for="g-tempo" class="g-lbl">Rythme : <output id="g-tempo-out"></output></label>
         <input type="range" id="g-tempo" min="0.7" max="1.5" step="0.1" value="1">
       </div>
+      <div class="g-card g-stack" id="g-breath-card">
+        <label class="g-sw"><input type="checkbox" id="g-opt-breath"> Respiration lente à la fin</label>
+        <div class="g-field" id="g-breath-field">
+          <span class="g-lbl">Durée de la respiration</span>
+          <div class="g-seg" id="g-breath-len" role="group" aria-label="Durée de la respiration"></div>
+        </div>
+      </div>
       <div class="g-card g-stack">
         <span class="g-lbl">Voix et sons</span>
         <div class="g-field">
@@ -267,7 +301,7 @@ const OVERLAY_HTML = `
         <button type="button" class="g-btn g-small" id="g-voice-test">Tester la voix</button>
         <label class="g-sw"><input type="checkbox" id="g-opt-voice"> Voix activée</label>
         <label class="g-sw"><input type="checkbox" id="g-opt-enc"> Encouragements</label>
-        <label class="g-sw"><input type="checkbox" id="g-opt-beep"> Bips pendant le repos</label>
+        <label class="g-sw"><input type="checkbox" id="g-opt-beep"> Bips et sons doux</label>
         <div class="g-field">
           <label for="g-desc">Description des exercices</label>
           <select id="g-desc">
@@ -287,6 +321,7 @@ const OVERLAY_HTML = `
       <div class="g-card g-picto" id="g-picto-run"></div>
       <p class="g-lbl" id="g-set"></p>
       <p class="g-lbl g-side" id="g-side"></p>
+      <div class="g-breath" id="g-breath-box" aria-hidden="true" hidden><i id="g-breath-dot"></i></div>
       <div class="g-counter" aria-live="off"><span class="g-count" id="g-count"></span><span class="g-of" id="g-of"></span></div>
       <p class="g-cue" id="g-cue" aria-live="polite"></p>
       <div class="g-bar" aria-hidden="true"><i id="g-bar"></i></div>
@@ -336,7 +371,8 @@ export function openGuide(opts) {
   ;['title', 'close', 'setup', 'run', 'done', 'picto', 'picto-run', 'amount-title', 'amounts', 'rest', 'tempo', 'tempo-out',
     'voice', 'voice-status', 'rate', 'rate-out', 'voice-test', 'opt-voice', 'opt-enc', 'opt-beep', 'desc', 'start',
     'run-ex', 'state', 'pos', 'set', 'side', 'count', 'of', 'cue', 'bar', 'skip', 'pause', 'stop', 'nav', 'prev', 'next',
-    'said', 'done-title', 'done-text', 'again', 'complete', 'back'
+    'said', 'done-title', 'done-text', 'again', 'complete', 'back',
+    'breath-card', 'opt-breath', 'breath-field', 'breath-len', 'breath-box', 'breath-dot'
   ].forEach(id => { ui[id] = $(id) })
 
   let run = null
@@ -344,7 +380,14 @@ export function openGuide(opts) {
 
   onSaid = text => { ui.said.textContent = ''; const b = el('b', '', 'Voix : '); ui.said.append(b, `« ${text} »`) }
 
+  // Mode respiration de l'écran d'exercice : cercle animé, compteur réduit, sans les notes d'effort
+  const setBreathing = on => {
+    ui.run.classList.toggle('g-breathing', on)
+    ui['breath-box'].hidden = !on
+  }
+
   const showScreen = name => {
+    setBreathing(false)
     ui.setup.hidden = name !== 'setup'
     ui.run.hidden = name !== 'run'
     ui.done.hidden = name !== 'done'
@@ -371,6 +414,7 @@ export function openGuide(opts) {
     // Pas de séries, de rythme ni de description : seulement les durées, la voix et les bips
     ;[ui.rest, ui.tempo, ui.desc].forEach(node => { node.closest('.g-field').hidden = true })
   }
+  ui['breath-card'].hidden = !session // un exercice seul n'a pas de respiration finale
 
   // --- Réglages ---
   const segment = (container, items, current, onPick) => {
@@ -465,6 +509,9 @@ export function openGuide(opts) {
     ui['opt-voice'].checked = settings.voiceOn
     ui['opt-enc'].checked = settings.enc
     ui['opt-beep'].checked = settings.beep
+    ui['opt-breath'].checked = settings.breath
+    ui['breath-field'].hidden = !settings.breath
+    segment(ui['breath-len'], BREATH_OPTIONS.map(n => [n, `${n} min`]), settings.breathMin, n => { settings.breathMin = n; saveSettings(); renderSettings() })
     ui.desc.value = settings.descMode
     renderVoices()
   }
@@ -475,6 +522,7 @@ export function openGuide(opts) {
   ui['opt-voice'].addEventListener('change', e => { settings.voiceOn = e.target.checked; saveSettings() })
   ui['opt-enc'].addEventListener('change', e => { settings.enc = e.target.checked; saveSettings() })
   ui['opt-beep'].addEventListener('change', e => { settings.beep = e.target.checked; saveSettings() })
+  ui['opt-breath'].addEventListener('change', e => { settings.breath = e.target.checked; saveSettings(); renderSettings() })
   ui.desc.addEventListener('change', e => { settings.descMode = e.target.value; saveSettings() })
   ui['voice-test'].addEventListener('click', () => {
     ensureAudio()
@@ -654,6 +702,72 @@ export function openGuide(opts) {
     return marks.sort((a, b) => a.at - b.at)
   }
 
+  // Respiration lente de fin de séance : cycles de 5 s d'inspiration et 5 s d'expiration.
+  // Une seule attente pour toute la durée ; la phase et le cercle se déduisent du temps écoulé,
+  // ce qui garde la pause, « Passer » et l'arrêt corrects. Retourne false si le guide est interrompu.
+  const doBreath = async r => {
+    const total = Math.max(BREATH_OPTIONS[0], Math.min(BREATH_OPTIONS[BREATH_OPTIONS.length - 1], settings.breathMin)) * 60
+    const phases = total / BREATH_PHASE_S
+    ui['run-ex'].textContent = 'Respiration'
+    setPicto(ui['picto-run'], null)
+    ui.pos.textContent = ''
+    ui.side.textContent = ''
+    ui.nav.hidden = true
+    setBreathing(true)
+    ui['breath-dot'].style.transform = `scale(${BREATH_SCALE[0]})`
+    setState('Respiration')
+    setCue('Installe-toi confortablement')
+    setCount('', '')
+    setBar(0)
+    ui.set.textContent = ''
+
+    await speak(BREATH_INTRO, { wait: true, run: r })
+    if (dead(r)) return false
+
+    const talk = settings.voiceOn && !!synth
+    let phase = -1
+    let leftShown = -1
+    let reached = 0
+    const ok = await sleep(total * 1000, r, {
+      skippable: true,
+      onProgress: f => {
+        reached = f
+        const t = total * f
+        const idx = Math.min(Math.floor(t / BREATH_PHASE_S), phases - 1)
+        const inhale = idx % 2 === 0
+        const p = Math.min((t - idx * BREATH_PHASE_S) / BREATH_PHASE_S, 1)
+        const eased = (1 - Math.cos(Math.PI * p)) / 2
+        const grow = inhale ? eased : 1 - eased
+        ui['breath-dot'].style.transform = `scale(${BREATH_SCALE[0] + (BREATH_SCALE[1] - BREATH_SCALE[0]) * grow})`
+        if (idx !== phase) {
+          phase = idx
+          setCue(inhale ? 'Inspire' : 'Expire')
+          if (inhale && total > 60 && idx * BREATH_PHASE_S === total - 60) {
+            if (talk) speak('Encore une minute.'); else chime(523, 0.6)
+          } else if (talk && idx < BREATH_VOICE_PHASES) {
+            speak(inhale ? 'Inspire' : 'Expire')
+          } else {
+            chime(inhale ? 523 : 392, 0.6)
+          }
+        }
+        setCount(Math.max(1, Math.ceil(BREATH_PHASE_S - (t - idx * BREATH_PHASE_S))), 's')
+        const left = Math.ceil(total - t)
+        if (left !== leftShown) {
+          leftShown = left
+          ui.set.textContent = `Temps restant : ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`
+        }
+        setBar(f)
+      }
+    })
+    if (!ok) return false
+    if (reached >= 1) {
+      chime(440, 1.2)
+      setCue('Doucement')
+      await speak(BREATH_OUTRO, { wait: true, run: r })
+    }
+    return !dead(r)
+  }
+
   // Elliptique guidé : échauffement, Zone 2, retour au calme
   const runEllipt = async r => {
     ui['run-ex'].textContent = 'Elliptique'
@@ -681,6 +795,8 @@ export function openGuide(opts) {
     setCue('Retour au calme')
     speak('Retour au calme.')
     if (!await countdown(r, cool * 60, false)) return
+
+    if (settings.breath && !await doBreath(r)) return
 
     unlockScreen()
     setState('Terminé')
@@ -748,6 +864,7 @@ export function openGuide(opts) {
       lead = i < ids.length ? `Exercice terminé. Prochain exercice : ${EXERCISES[ids[i]].name}. Prépare le matériel.` : null
     }
     if (r.aborted) return
+    if (session && settings.breath && !await doBreath(r)) return
     unlockScreen()
     setState('Terminé')
     await speak(session ? 'Séance terminée. Beau travail.' : 'Exercice terminé. Beau travail.', { wait: true, run: r })

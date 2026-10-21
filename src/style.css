@@ -952,6 +952,20 @@ body.g-open { overflow: hidden; }
 .g-bar { height: 10px; border-radius: 999px; background: #e5e7eb; overflow: hidden; }
 .g-bar i { display: block; height: 100%; width: 0%; background: var(--secondary); border-radius: 999px; }
 
+.g-breath { display: flex; justify-content: center; align-items: center; height: 230px; }
+.g-breath i {
+  display: block;
+  width: 210px;
+  height: 210px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #c9a27a, var(--secondary));
+  opacity: 0.55;
+  transform: scale(0.5);
+  will-change: transform;
+}
+.g-breathing .g-count { font-size: clamp(44px, 14vw, 64px); }
+.g-breathing .g-note { display: none; }
+
 .g-said { min-height: 3.2em; padding-top: 0.6rem; border-top: 1px solid var(--border); font-size: 0.9rem; color: var(--text-muted); }
 .g-said b { color: var(--text-main); }
 
