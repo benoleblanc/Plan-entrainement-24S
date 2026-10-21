@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Document de travail (ne pas publier)
+Modification_plan_24S_pour_Claude_Code.md
+Ajustements_images_et_audio.zip
+PROMPT_Claude_Code_images_et_audio.md
+reference/

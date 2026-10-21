@@ -1,13 +1,10 @@
 import './style.css'
+import { EXERCISES, PROGRESSION_RULE, REST_TEXT, SAFETY_RULES, getWeekConfig, setsLabel } from './plan.js'
 
 // Configuration
 const TOTAL_WEEKS = 24
-const TRAINING_PROGRAM = [
-  { id: 'muscu', title: 'Musculation (30-40 min)', desc: 'Squats 3x10,<br> Row élastique 3x12,<br> Push-ups mur 3x10' },
-  { id: 'hiit', title: 'Cardio Intervalles', desc: '5 min échauffement <br> 6-8 cycles (1 min Rapide / 2 min Lent)' },
-  { id: 'zone2', title: 'Cardio - Zone 2', desc: 'Marche 30-45 min en Zone 2' },
-  { id: 'long', title: 'Marche Longue / Rando / Vélo', desc: '60 à 90 min d\'activité continue' }
-]
+
+const newBilan = () => ({ taille: null, douleur: null, note: '' })
 
 // State management
 let state = {
@@ -16,7 +13,8 @@ let state = {
     id: i + 1,
     daily67: [false, false, false, false, false, false],
     training: [false, false, false, false],
-    manualComplete: false
+    manualComplete: false,
+    bilan: newBilan()
   }))
 }
 
@@ -32,6 +30,7 @@ function loadState() {
     // Migration
     state.weeks.forEach(week => {
       if (week.manualComplete === undefined) week.manualComplete = false
+      if (!week.bilan) week.bilan = newBilan()
     })
   }
 }
@@ -102,7 +101,10 @@ function renderActiveWeek() {
   const trainingContainer = document.getElementById('training-list')
   trainingContainer.innerHTML = ''
 
-  TRAINING_PROGRAM.forEach((prog, idx) => {
+  const weekConfig = getWeekConfig(state.currentWeek)
+  document.getElementById('phase-banner').textContent = weekConfig.label
+
+  weekConfig.seances.forEach((prog, idx) => {
     const checked = weekData.training[idx]
     const row = document.createElement('div')
     row.className = `training-row glass ${checked ? 'checked' : ''}`
@@ -115,17 +117,11 @@ function renderActiveWeek() {
         <div class="training-desc">${prog.desc}</div>
       </div>
       <div style="display: flex; align-items: center; gap: 0.5rem;">
-        ${prog.id === 'muscu' ? `
-          <button class="btn-info" onclick="window.showExercises(event)">
+        ${prog.type === 'muscu' ? `
+          <button class="btn-info" onclick="window.showExercises(event, '${prog.id}')">
             <span>Exercices</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
           </button>
-        ` : ''}
-        ${prog.id === 'hiit' ? `
-          <a href="cardio.html" class="btn-info" style="text-decoration: none;">
-            <span>Minuteur</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          </a>
         ` : ''}
         <div class="task-item ${checked ? 'checked' : ''}" style="flex-shrink: 0; padding: 0.5rem;" onclick="window.toggleTask('training', ${idx})">
           <div class="checkbox-visual">
@@ -138,10 +134,82 @@ function renderActiveWeek() {
     trainingContainer.appendChild(row)
   })
 
+  renderBilan(weekData, weekConfig)
+
   // Render Manual Completion Section
   renderManualCompletion(weekData)
 
   calculateProgress()
+}
+
+// Bilan de la semaine (facultatif, données conservées uniquement dans le localStorage)
+function renderBilan(weekData, weekConfig) {
+  const container = document.getElementById('bilan-container')
+  const bilan = weekData.bilan
+
+  container.innerHTML = `
+    <div class="bilan-field">
+      <label for="bilan-taille">Tour de taille (cm)</label>
+      <input id="bilan-taille" type="number" inputmode="decimal" min="30" max="300" step="0.5" placeholder="Facultatif">
+      <span class="bilan-hint">À mesurer au même endroit, le matin, environ toutes les 2 semaines.</span>
+    </div>
+    <div class="bilan-field">
+      <label for="bilan-douleur">Douleur articulaire (0 à 10)</label>
+      <input id="bilan-douleur" type="number" inputmode="numeric" min="0" max="10" step="1" placeholder="Facultatif">
+    </div>
+    <div class="bilan-field">
+      <label for="bilan-note">Note</label>
+      <input id="bilan-note" type="text" maxlength="200" placeholder="Facultatif">
+    </div>
+    <div id="bilan-recap"></div>
+  `
+
+  const taille = document.getElementById('bilan-taille')
+  const douleur = document.getElementById('bilan-douleur')
+  const note = document.getElementById('bilan-note')
+  taille.value = bilan.taille ?? ''
+  douleur.value = bilan.douleur ?? ''
+  note.value = bilan.note
+
+  const toNumber = (input, min, max) => {
+    const value = parseFloat(input.value)
+    return Number.isFinite(value) && value >= min && value <= max ? value : null
+  }
+  const onChange = () => {
+    bilan.taille = toNumber(taille, 30, 300)
+    bilan.douleur = toNumber(douleur, 0, 10)
+    bilan.note = note.value
+    saveState()
+    renderBilanRecap(weekConfig)
+  }
+  ;[taille, douleur, note].forEach(input => input.addEventListener('input', onChange))
+
+  renderBilanRecap(weekConfig)
+}
+
+function renderBilanRecap(weekConfig) {
+  const recap = document.getElementById('bilan-recap')
+  if (!weekConfig.bilan) {
+    recap.innerHTML = ''
+    return
+  }
+
+  const values = key => state.weeks.map(w => w.bilan[key]).filter(v => v !== null)
+  const line = (label, list, unit) => {
+    if (list.length === 0) return `<li>${label} : pas encore de valeur saisie.</li>`
+    if (list.length === 1) return `<li>${label} : ${list[0]}${unit} (une seule valeur saisie).</li>`
+    return `<li>${label} : ${list[0]}${unit} au début, ${list[list.length - 1]}${unit} à la fin.</li>`
+  }
+
+  recap.innerHTML = `
+    <div class="bilan-recap">
+      <ul>
+        ${line('Tour de taille', values('taille'), ' cm')}
+        ${line('Douleur articulaire', values('douleur'), '/10')}
+      </ul>
+      <p><strong>Bilan de 24 semaines : tu peux décider calmement si tu repars pour un second cycle.</strong></p>
+    </div>
+  `
 }
 
 function renderManualCompletion(weekData) {
@@ -169,8 +237,41 @@ function renderManualCompletion(weekData) {
 }
 
 // Modal Logic
-window.showExercises = (e) => {
+window.showExercises = (e, seanceId) => {
   if (e) e.stopPropagation()
+
+  const weekConfig = getWeekConfig(state.currentWeek)
+  const seance = weekConfig.seances.find(s => s.id === seanceId)
+  if (!seance) return
+
+  const showProgression = weekConfig.phase === 3
+  const exercisesHtml = seance.exercises.map(id => {
+    const ex = EXERCISES[id]
+    return `
+      <article class="exo">
+        <h4>${ex.name}</h4>
+        <div class="exo-sets">${setsLabel(ex, weekConfig)}${ex.role === 'appoint' ? ' <span class="exo-tag">appoint</span>' : ''}</div>
+        <p class="exo-consigne">${ex.consigne}</p>
+        <ul class="exo-points">${ex.points.map(p => `<li>${p}</li>`).join('')}</ul>
+        ${ex.note ? `<p class="exo-note">${ex.note}</p>` : ''}
+        ${showProgression && ex.progression ? `<p class="exo-progression"><strong>Quand c'est facile :</strong> ${ex.progression}</p>` : ''}
+      </article>
+    `
+  }).join('')
+
+  document.getElementById('modal-body').innerHTML = `
+    <h3>${seance.title}</h3>
+    <p class="modal-sub">${weekConfig.label} · ${weekConfig.reserve} répétitions en réserve · ${REST_TEXT}</p>
+    <p class="modal-sub">Échauffement : 5 min d'elliptique à effort léger, puis une première série légère du premier exercice.</p>
+    ${exercisesHtml}
+    <section class="modal-rules">
+      <h4>Règle de progression</h4>
+      <p>${PROGRESSION_RULE}</p>
+      <h4>Consignes de sécurité</h4>
+      <ul>${SAFETY_RULES.map(r => `<li>${r}</li>`).join('')}</ul>
+    </section>
+  `
+  document.getElementById('modal-body').scrollTop = 0
   document.getElementById('exercise-modal').classList.add('active')
 }
 

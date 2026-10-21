@@ -193,19 +193,156 @@ p { font-size: 0.85rem; line-height: 1.4; color: var(--text-muted); }
 
 .modal-content {
   position: relative;
-  max-width: 900px;
+  max-width: 600px;
   width: 100%;
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
   background: white;
   border-radius: 1rem;
   overflow: hidden;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
-.modal-img {
-  width: 100%;
-  max-height: 85vh;
-  object-fit: contain;
-  display: block;
+.modal-body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding: 1.25rem 1rem 1.5rem;
+}
+
+.modal-body h3 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--primary-dark);
+  padding-right: 3rem; /* laisse la place à la croix */
+  margin-bottom: 0.35rem;
+}
+
+.modal-body h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.modal-sub {
+  font-size: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.exo {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.exo-sets {
+  display: inline-block;
+  margin: 0.2rem 0 0.4rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 2rem;
+  background: rgba(74, 103, 65, 0.1);
+  color: var(--primary-dark);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.exo-tag {
+  margin-left: 0.25rem;
+  color: var(--secondary);
+  font-weight: 600;
+}
+
+.exo-consigne {
+  color: var(--text-main);
+}
+
+.exo-points {
+  margin: 0.4rem 0 0 1.1rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.exo-note,
+.exo-progression {
+  margin-top: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  border-left: 3px solid var(--secondary);
+  background: rgba(168, 124, 81, 0.07);
+  border-radius: 0 0.5rem 0.5rem 0;
+  color: var(--text-main);
+}
+
+.modal-rules {
+  margin-top: 1.5rem;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background: rgba(74, 103, 65, 0.06);
+}
+
+.modal-rules h4:not(:first-child) {
+  margin-top: 0.75rem;
+}
+
+.modal-rules p {
+  color: var(--text-main);
+}
+
+.modal-rules ul {
+  margin: 0.3rem 0 0 1.1rem;
+  font-size: 0.8rem;
+  color: var(--text-main);
+}
+
+/* Bilan de la semaine */
+.bilan-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.bilan-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.bilan-field label {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--primary);
+}
+
+.bilan-field input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: #f9fafb;
+  font-family: inherit;
+  font-size: 1rem; /* évite le zoom automatique sur téléphone */
+  color: var(--text-main);
+}
+
+.bilan-hint {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.bilan-recap {
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background: rgba(168, 124, 81, 0.07);
+}
+
+.bilan-recap ul {
+  margin: 0 0 0.5rem 1.1rem;
+  font-size: 0.8rem;
+  color: var(--text-main);
+}
+
+.bilan-recap p {
+  color: var(--text-main);
 }
 
 .close-modal {
