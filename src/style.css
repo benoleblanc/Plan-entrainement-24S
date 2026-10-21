@@ -236,6 +236,13 @@ p { font-size: 0.85rem; line-height: 1.4; color: var(--text-muted); }
   border-top: 1px solid var(--border);
 }
 
+.exo-picto {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 0.5rem;
+}
+
 .exo-sets {
   display: inline-block;
   margin: 0.2rem 0 0.4rem;

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 300" role="img" aria-labelledby="t d">
+  <title id="t">Planche</title>
+  <desc id="d">Sur les avant-bras, corps droit de la tête aux talons, ventre contracté. La ligne pointillée montre l'alignement.</desc>
+  <rect x="2" y="2" width="316" height="296" rx="18" fill="#fbfaf6" stroke="#e6e1d6" stroke-width="2"/>
+  <g transform="translate(10,0)"><g transform="translate(28,0) scale(1.0)"><line x1="8" y1="254" x2="290" y2="254" stroke="#d8d2c5" stroke-width="4" stroke-linecap="round"/><line x1="2" y1="248" x2="235.6" y2="193.6" stroke="#a87c51" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round" opacity="0.8"/><polyline points="18.0,250.0 10.0,244.0 117.4,220.0 180.0,206.0" fill="none" stroke="#354a2e" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/><circle cx="202.4" cy="201.0" r="15" fill="#354a2e"/><polyline points="180.0,206.0 180.0,248.0 222.0,248.0" fill="none" stroke="#4a6741" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/></g></g>
+</svg>

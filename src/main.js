@@ -250,6 +250,7 @@ window.showExercises = (e, seanceId) => {
     return `
       <article class="exo">
         <h4>${ex.name}</h4>
+        <img class="exo-picto" src="exercices/${id}.svg" alt="${ex.name}" loading="lazy">
         <div class="exo-sets">${setsLabel(ex, weekConfig)}${ex.role === 'appoint' ? ' <span class="exo-tag">appoint</span>' : ''}</div>
         <p class="exo-consigne">${ex.consigne}</p>
         <ul class="exo-points">${ex.points.map(p => `<li>${p}</li>`).join('')}</ul>
