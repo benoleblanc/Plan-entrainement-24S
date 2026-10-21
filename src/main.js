@@ -295,6 +295,9 @@ document.getElementById('modal-body').addEventListener('click', (e) => {
   if (btn) openGuide({ ids: [btn.dataset.guide], weekConfig: getWeekConfig(state.currentWeek) })
 })
 
+// Bouton « Respiration lente » de l'en-tête : respiration guidée sans exercice
+document.getElementById('btn-breath').addEventListener('click', () => openGuide({ kind: 'breath', title: 'Respiration lente' }))
+
 // Bouton « Séance guidée » d'une carte de musculation : tous les exercices à la suite
 window.startGuidedSession = (e, idx) => {
   if (e) e.stopPropagation()
