@@ -120,7 +120,11 @@ function renderActiveWeek() {
           <button class="btn-info btn-guided" onclick="window.startGuidedSession(event, ${idx})">
             <span>Séance guidée</span>
           </button>
-        ` : ''}
+        ` : `
+          <button class="btn-info btn-guided" onclick="window.startGuidedSession(event, ${idx})">
+            <span>Guider</span>
+          </button>
+        `}
       </div>
       <div style="display: flex; align-items: center; gap: 0.5rem;">
         ${prog.type === 'muscu' ? `
@@ -299,7 +303,7 @@ window.startGuidedSession = (e, idx) => {
   const seance = weekConfig.seances[idx]
   const isChecked = () => state.weeks.find(w => w.id === weekId).training[idx]
   openGuide({
-    kind: 'session',
+    kind: seance.type === 'ellipt' ? 'ellipt' : 'session',
     ids: seance.exercises,
     weekConfig,
     title: seance.title,

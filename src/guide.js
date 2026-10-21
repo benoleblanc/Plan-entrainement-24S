@@ -10,6 +10,8 @@ const READY_TEXT = 'Expire pendant l\'effort. Prêt ? Trois, deux, un, on y va.'
 const SIDE_PAUSE_S = 5
 const WARMUP_S = 300
 const TRANSITION_S = 15
+const ZONE2_RANGE = [20, 30]
+const COOLDOWN_RANGE = [3, 5]
 
 const DEFAULT_SETTINGS = {
   voiceName: '',
@@ -21,7 +23,9 @@ const DEFAULT_SETTINGS = {
   beep: true,
   descMode: 'first', // first | always | never
   amounts: {},
-  described: {}
+  described: {},
+  zone2: 25, // elliptique : minutes en Zone 2
+  cooldown: 4 // elliptique : minutes de retour au calme
 }
 
 const param = name => {
@@ -314,8 +318,10 @@ const OVERLAY_HTML = `
 // opts : { ids: [ids d'exercices], weekConfig, title, kind: 'exercise' (défaut) | 'session',
 //          onComplete (séance : cocher), isChecked (séance : déjà cochée ?) }
 export function openGuide(opts) {
-  const { ids, weekConfig } = opts
-  const session = opts.kind === 'session'
+  const ids = opts.ids || []
+  const weekConfig = opts.weekConfig
+  const ellipt = opts.kind === 'ellipt'
+  const session = opts.kind === 'session' || ellipt // séance complète : cochage proposé à la fin
   const overlay = el('div', 'g-overlay')
   overlay.id = 'guide-overlay'
   overlay.setAttribute('role', 'dialog')
@@ -361,6 +367,10 @@ export function openGuide(opts) {
   ui.title.textContent = opts.title || EXERCISES[ids[0]].name
   setPicto(ui.picto, session ? null : ids[0])
   if (session) ui.start.textContent = 'Commencer la séance'
+  if (ellipt) {
+    // Pas de séries, de rythme ni de description : seulement les durées, la voix et les bips
+    ;[ui.rest, ui.tempo, ui.desc].forEach(node => { node.closest('.g-field').hidden = true })
+  }
 
   // --- Réglages ---
   const segment = (container, items, current, onPick) => {
@@ -379,35 +389,49 @@ export function openGuide(opts) {
     return t < 0.95 ? `plus lent (×${fr(t)})` : t > 1.05 ? `plus rapide (×${fr(t)})` : 'normal'
   }
 
+  // Une ligne « nom + − valeur + » ; get/set lisent et écrivent la valeur mémorisée
+  const amountRow = ({ label, sub, get, set, step }) => {
+    const row = el('div', 'g-amount-row')
+    const name = el('div', 'g-amount-name', label)
+    name.appendChild(el('small', '', sub))
+    const out = el('output', '', String(get()))
+    const change = delta => { set(get() + delta * step); saveSettings(); out.textContent = String(get()) }
+    const minus = el('button', '', '−')
+    const plus = el('button', '', '+')
+    minus.type = plus.type = 'button'
+    minus.setAttribute('aria-label', `Moins pour ${label}`)
+    plus.setAttribute('aria-label', `Plus pour ${label}`)
+    minus.addEventListener('click', () => change(-1))
+    plus.addEventListener('click', () => change(1))
+    const stepper = el('div', 'g-stepper')
+    stepper.append(minus, out, plus)
+    row.append(name, stepper)
+    ui.amounts.appendChild(row)
+  }
+
   const renderAmounts = () => {
     ui.amounts.innerHTML = ''
+    if (ellipt) {
+      ui['amount-title'].textContent = 'Durées (minutes)'
+      amountRow({ label: 'Partie Zone 2', sub: `${ZONE2_RANGE[0]} à ${ZONE2_RANGE[1]} min`, step: 1,
+        get: () => settings.zone2, set: v => { settings.zone2 = Math.max(ZONE2_RANGE[0], Math.min(ZONE2_RANGE[1], v)) } })
+      amountRow({ label: 'Retour au calme', sub: `${COOLDOWN_RANGE[0]} à ${COOLDOWN_RANGE[1]} min`, step: 1,
+        get: () => settings.cooldown, set: v => { settings.cooldown = Math.max(COOLDOWN_RANGE[0], Math.min(COOLDOWN_RANGE[1], v)) } })
+      return
+    }
     const allHold = ids.every(id => GUIDE[id].mode === 'hold')
     const anyHold = ids.some(id => GUIDE[id].mode === 'hold')
     ui['amount-title'].textContent = allHold ? 'Durée (secondes)' : anyHold ? 'Répétitions ou durée (secondes)' : 'Répétitions'
     ids.forEach(id => {
-      const g = GUIDE[id]
-      const hold = g.mode === 'hold'
+      const hold = GUIDE[id].mode === 'hold'
       const sets = seriesFor(EXERCISES[id], weekConfig)
-      const row = el('div', 'g-amount-row')
-      const name = el('div', 'g-amount-name', EXERCISES[id].name)
-      name.appendChild(el('small', '', `${sets} ${hold ? 'passages' : 'séries'} cette semaine`))
-      const out = el('output', '', String(amountOf(id)))
-      const change = delta => {
-        settings.amounts[id] = clampAmount(id, amountOf(id) + delta * (hold ? 5 : 1))
-        saveSettings()
-        out.textContent = String(amountOf(id))
-      }
-      const minus = el('button', '', '−')
-      const plus = el('button', '', '+')
-      minus.type = plus.type = 'button'
-      minus.setAttribute('aria-label', `Moins pour ${EXERCISES[id].name}`)
-      plus.setAttribute('aria-label', `Plus pour ${EXERCISES[id].name}`)
-      minus.addEventListener('click', () => change(-1))
-      plus.addEventListener('click', () => change(1))
-      const stepper = el('div', 'g-stepper')
-      stepper.append(minus, out, plus)
-      row.append(name, stepper)
-      ui.amounts.appendChild(row)
+      amountRow({
+        label: EXERCISES[id].name,
+        sub: `${sets} ${hold ? 'passages' : 'séries'} cette semaine`,
+        step: hold ? 5 : 1,
+        get: () => amountOf(id),
+        set: v => { settings.amounts[id] = clampAmount(id, v) }
+      })
     })
   }
 
@@ -460,11 +484,14 @@ export function openGuide(opts) {
   // --- Déroulement d'un exercice ---
 
   // Compte à rebours affiché (secondes restantes, ou m:ss au-delà d'une minute), avec « Passer » possible
-  const countdown = async (r, seconds, skippable) => {
+  // events : annonces vocales [{ at (s écoulées), text }] triées par ordre chronologique
+  const countdown = async (r, seconds, skippable, events = []) => {
     let shown = -1
+    const pending = events.slice()
     return sleep(seconds * 1000, r, {
       skippable,
       onProgress: f => {
+        while (pending.length && pending[0].at <= seconds * f) speak(pending.shift().text)
         const left = Math.ceil(seconds * (1 - f))
         if (left === shown) { setBar(f); return }
         shown = left
@@ -589,7 +616,7 @@ export function openGuide(opts) {
 
   // --- Séance guidée : échauffement, puis les exercices enchaînés ---
 
-  const showPosition = i => { ui.pos.textContent = session ? `Exercice ${Math.min(i + 1, ids.length)} sur ${ids.length}` : '' }
+  const showPosition = i => { ui.pos.textContent = session && !ellipt ?`Exercice ${Math.min(i + 1, ids.length)} sur ${ids.length}` : '' }
 
   // Phrase de transition puis compte à rebours (bouton « Passer »)
   const transition = async (r, text, seconds, label) => {
@@ -614,6 +641,52 @@ export function openGuide(opts) {
     if (!await countdown(r, WARMUP_S, true)) return false
     beep(990, 0.4)
     return true
+  }
+
+  // Annonces de la partie Zone 2 : toutes les 5 minutes écoulées, et à la mi-parcours
+  const zoneEvents = minutes => {
+    const mid = minutes * 30
+    const marks = []
+    for (let t = 5; t < minutes; t += 5) marks.push({ at: t * 60, text: `${capital(word(t))} minutes écoulées.` })
+    const same = marks.find(m => m.at === mid)
+    if (same) same.text += ' À mi-parcours.'
+    else marks.push({ at: mid, text: 'À mi-parcours.' })
+    return marks.sort((a, b) => a.at - b.at)
+  }
+
+  // Elliptique guidé : échauffement, Zone 2, retour au calme
+  const runEllipt = async r => {
+    ui['run-ex'].textContent = 'Elliptique'
+    setPicto(ui['picto-run'], null)
+    ui.pos.textContent = ''
+    ui.set.textContent = ''
+    ui.side.textContent = ''
+    ui.nav.hidden = true
+
+    setState('Échauffement')
+    setCue('Effort léger')
+    speak('Échauffement, effort léger.')
+    if (!await countdown(r, WARMUP_S, true)) return
+    beep(990, 0.4)
+
+    const zone = Math.max(ZONE2_RANGE[0], Math.min(ZONE2_RANGE[1], settings.zone2))
+    setState('Zone 2')
+    setCue('Tu peux parler en phrases complètes')
+    speak('Zone 2, tu peux parler en phrases complètes.')
+    if (!await countdown(r, zone * 60, false, zoneEvents(zone))) return
+    beep(990, 0.4)
+
+    const cool = Math.max(COOLDOWN_RANGE[0], Math.min(COOLDOWN_RANGE[1], settings.cooldown))
+    setState('Retour au calme')
+    setCue('Retour au calme')
+    speak('Retour au calme.')
+    if (!await countdown(r, cool * 60, false)) return
+
+    unlockScreen()
+    setState('Terminé')
+    await speak('Séance terminée. Beau travail.', { wait: true, run: r })
+    if (r.aborted) return
+    showDone()
   }
 
   const showDone = () => {
@@ -646,6 +719,7 @@ export function openGuide(opts) {
     ensureAudio()
     lockScreen()
 
+    if (ellipt) { await runEllipt(r); return }
     if (session && !await warmup(r)) return
 
     let i = 0
