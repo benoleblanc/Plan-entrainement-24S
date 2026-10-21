@@ -116,6 +116,11 @@ function renderActiveWeek() {
       <div class="training-info" style="cursor: pointer; flex: 1;" onclick="window.toggleTask('training', ${idx})">
         <div class="training-title">${prog.title}</div>
         <div class="training-desc">${prog.desc}</div>
+        ${prog.type === 'muscu' ? `
+          <button class="btn-info btn-guided" onclick="window.startGuidedSession(event, ${idx})">
+            <span>Séance guidée</span>
+          </button>
+        ` : ''}
       </div>
       <div style="display: flex; align-items: center; gap: 0.5rem;">
         ${prog.type === 'muscu' ? `
@@ -286,6 +291,24 @@ document.getElementById('modal-body').addEventListener('click', (e) => {
   if (btn) openGuide({ ids: [btn.dataset.guide], weekConfig: getWeekConfig(state.currentWeek) })
 })
 
+// Bouton « Séance guidée » d'une carte de musculation : tous les exercices à la suite
+window.startGuidedSession = (e, idx) => {
+  if (e) e.stopPropagation()
+  const weekId = state.currentWeek
+  const weekConfig = getWeekConfig(weekId)
+  const seance = weekConfig.seances[idx]
+  const isChecked = () => state.weeks.find(w => w.id === weekId).training[idx]
+  openGuide({
+    kind: 'session',
+    ids: seance.exercises,
+    weekConfig,
+    title: seance.title,
+    isChecked,
+    // La séance n'est cochée que si l'utilisateur appuie sur le bouton de fin
+    onComplete: () => { if (state.currentWeek === weekId && !isChecked()) toggleTask('training', idx) }
+  })
+}
+
 const closeModal = () => document.getElementById('exercise-modal').classList.remove('active')
 document.getElementById('close-modal').onclick = closeModal
 document.getElementById('exercise-modal').onclick = (e) => {
@@ -335,7 +358,7 @@ function checkWeeklyCompletion() {
   const dailyDone = weekData.daily67.every(Boolean)
   const trainingDone = weekData.training.every(Boolean)
 
-  if (dailyDone && trainingDone) {
+  if (dailyDone && trainingDone && typeof confetti === 'function') {
     confetti({
       particleCount: 150,
       spread: 70,

@@ -8,6 +8,8 @@ const WORDS = ['zéro', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 
 const ENCOURAGEMENTS = ['Bien joué', 'Beau contrôle', 'Continue comme ça', 'Très bien', 'Respire bien']
 const READY_TEXT = 'Expire pendant l\'effort. Prêt ? Trois, deux, un, on y va.'
 const SIDE_PAUSE_S = 5
+const WARMUP_S = 300
+const TRANSITION_S = 15
 
 const DEFAULT_SETTINGS = {
   voiceName: '',
@@ -309,9 +311,11 @@ const OVERLAY_HTML = `
 `
 
 // Ouvre le guide en plein écran, par-dessus la page.
-// opts : { ids: [id d'exercice], weekConfig, title }
+// opts : { ids: [ids d'exercices], weekConfig, title, kind: 'exercise' (défaut) | 'session',
+//          onComplete (séance : cocher), isChecked (séance : déjà cochée ?) }
 export function openGuide(opts) {
   const { ids, weekConfig } = opts
+  const session = opts.kind === 'session'
   const overlay = el('div', 'g-overlay')
   overlay.id = 'guide-overlay'
   overlay.setAttribute('role', 'dialog')
@@ -355,8 +359,8 @@ export function openGuide(opts) {
   }
 
   ui.title.textContent = opts.title || EXERCISES[ids[0]].name
-  const single = ids.length === 1
-  setPicto(ui.picto, single ? ids[0] : null)
+  setPicto(ui.picto, session ? null : ids[0])
+  if (session) ui.start.textContent = 'Commencer la séance'
 
   // --- Réglages ---
   const segment = (container, items, current, onPick) => {
@@ -455,14 +459,17 @@ export function openGuide(opts) {
 
   // --- Déroulement d'un exercice ---
 
-  // Compte à rebours affiché (secondes restantes), avec « Passer » possible
+  // Compte à rebours affiché (secondes restantes, ou m:ss au-delà d'une minute), avec « Passer » possible
   const countdown = async (r, seconds, skippable) => {
     let shown = -1
     return sleep(seconds * 1000, r, {
       skippable,
       onProgress: f => {
         const left = Math.ceil(seconds * (1 - f))
-        if (left !== shown) { shown = left; setCount(left, 's') }
+        if (left === shown) { setBar(f); return }
+        shown = left
+        if (left >= 60) setCount(`${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`, '')
+        else setCount(left, 's')
         setBar(f)
       }
     })
@@ -580,32 +587,98 @@ export function openGuide(opts) {
     return !dead(r)
   }
 
-  // --- Séance : une exécution complète ---
+  // --- Séance guidée : échauffement, puis les exercices enchaînés ---
+
+  const showPosition = i => { ui.pos.textContent = session ? `Exercice ${Math.min(i + 1, ids.length)} sur ${ids.length}` : '' }
+
+  // Phrase de transition puis compte à rebours (bouton « Passer »)
+  const transition = async (r, text, seconds, label) => {
+    setState('Transition')
+    setCue(label)
+    ui.side.textContent = ''
+    ui.set.textContent = ''
+    speak(text)
+    return countdown(r, seconds, true)
+  }
+
+  const warmup = async r => {
+    ui['run-ex'].textContent = 'Échauffement'
+    setPicto(ui['picto-run'], null)
+    ui.pos.textContent = ''
+    ui.set.textContent = ''
+    ui.side.textContent = ''
+    ui.nav.hidden = true
+    setState('Échauffement')
+    setCue('Elliptique, effort léger')
+    speak('Échauffement : cinq minutes d\'elliptique à effort léger, puis une première série légère du premier exercice.')
+    if (!await countdown(r, WARMUP_S, true)) return false
+    beep(990, 0.4)
+    return true
+  }
+
+  const showDone = () => {
+    if (session) {
+      ui['done-title'].textContent = 'Séance terminée'
+      ui['done-text'].textContent = opts.isChecked && opts.isChecked() ? 'Cette séance est déjà cochée.' : 'Tu peux la cocher dans ton suivi.'
+      ui.again.hidden = true
+      ui.complete.hidden = !!(opts.isChecked && opts.isChecked())
+      ui.complete.disabled = false
+      ui.complete.textContent = 'Cocher cette séance comme faite'
+    } else {
+      const id = ids[0]
+      const N = seriesFor(EXERCISES[id], weekConfig)
+      const hold = GUIDE[id].mode === 'hold'
+      ui['done-title'].textContent = 'Exercice terminé'
+      ui['done-text'].textContent = `${EXERCISES[id].name} : ${N} ${hold ? 'passages' : 'séries'} de ${amountOf(id)}${hold ? ' secondes.' : ' répétitions.'}`
+    }
+    showScreen('done')
+  }
+
   const startRun = async () => {
     const r = { paused: false, aborted: false, skip: false, skippable: false, exAction: null }
     r.onSkippable = () => { ui.skip.hidden = !r.skippable }
     run = r
     ui.pause.textContent = 'Pause'
     ui.skip.hidden = true
-    ui.pos.textContent = ''
+    ui.nav.hidden = !session
+    showPosition(0)
     showScreen('run')
     ensureAudio()
     lockScreen()
 
-    for (const id of ids) {
-      if (!await guideExercise(r, id)) return
+    if (session && !await warmup(r)) return
+
+    let i = 0
+    let lead = null // phrase de transition avant l'exercice i (aucune pour le premier)
+    const applyAction = () => {
+      const a = r.exAction
+      r.exAction = null
+      if (a === 'next') i++
+      else if (a === 'prev') i = Math.max(0, i - 1)
+      lead = i < ids.length ? `Prochain exercice : ${EXERCISES[ids[i]].name}. Prépare le matériel.` : null
+    }
+    while (i < ids.length) {
+      showPosition(i)
+      ui.nav.hidden = !session
+      if (lead) {
+        setPicto(ui['picto-run'], ids[i])
+        ui['run-ex'].textContent = EXERCISES[ids[i]].name
+        await transition(r, lead, TRANSITION_S, 'Prépare le matériel')
+        if (r.aborted) return
+        if (r.exAction) { applyAction(); continue }
+      }
+      await guideExercise(r, ids[i])
+      if (r.aborted) return
+      if (r.exAction) { applyAction(); continue }
+      i++
+      lead = i < ids.length ? `Exercice terminé. Prochain exercice : ${EXERCISES[ids[i]].name}. Prépare le matériel.` : null
     }
     if (r.aborted) return
     unlockScreen()
     setState('Terminé')
-    await speak('Exercice terminé. Beau travail.', { wait: true, run: r })
+    await speak(session ? 'Séance terminée. Beau travail.' : 'Exercice terminé. Beau travail.', { wait: true, run: r })
     if (r.aborted) return
-    const id = ids[0]
-    const N = seriesFor(EXERCISES[id], weekConfig)
-    const hold = GUIDE[id].mode === 'hold'
-    ui['done-title'].textContent = 'Exercice terminé'
-    ui['done-text'].textContent = `${EXERCISES[id].name} : ${N} ${hold ? 'passages' : 'séries'} de ${amountOf(id)}${hold ? ' secondes.' : ' répétitions.'}`
-    showScreen('done')
+    showDone()
   }
 
   const stopAll = () => {
@@ -646,6 +719,24 @@ export function openGuide(opts) {
   })
   ui.stop.addEventListener('click', () => { stopAll(); showScreen('setup') })
   ui.skip.addEventListener('click', () => { if (run && run.skippable) run.skip = true })
+
+  // Passer l'exercice ou revenir au précédent (la pause éventuelle est levée)
+  const navigate = action => {
+    if (!run || run.aborted) return
+    run.paused = false
+    ui.pause.textContent = 'Pause'
+    run.exAction = action
+    cancelSpeech()
+  }
+  ui.next.addEventListener('click', () => navigate('next'))
+  ui.prev.addEventListener('click', () => navigate('prev'))
+
+  // La séance n'est jamais cochée automatiquement : seulement sur ce bouton
+  ui.complete.addEventListener('click', () => {
+    if (opts.onComplete) opts.onComplete()
+    ui.complete.disabled = true
+    ui.complete.textContent = 'Séance cochée'
+  })
   ui.back.addEventListener('click', close)
   ui.close.addEventListener('click', close)
 

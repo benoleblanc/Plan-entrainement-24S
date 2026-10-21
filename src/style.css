@@ -750,6 +750,10 @@ input:checked + .slider:before {
 
 
 
+.btn-guided {
+  margin-top: 0.5rem;
+}
+
 /* Guide audio (écran plein écran) */
 body.g-open { overflow: hidden; }
 
