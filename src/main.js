@@ -1,5 +1,6 @@
 import './style.css'
 import { EXERCISES, PROGRESSION_RULE, REST_TEXT, SAFETY_RULES, getWeekConfig, setsLabel } from './plan.js'
+import { openGuide } from './guide.js'
 
 // Configuration
 const TOTAL_WEEKS = 24
@@ -251,7 +252,10 @@ window.showExercises = (e, seanceId) => {
       <article class="exo">
         <h4>${ex.name}</h4>
         <img class="exo-picto" src="exercices/${id}.svg" alt="${ex.name}" loading="lazy">
-        <div class="exo-sets">${setsLabel(ex, weekConfig)}${ex.role === 'appoint' ? ' <span class="exo-tag">appoint</span>' : ''}</div>
+        <div class="exo-bar">
+          <div class="exo-sets">${setsLabel(ex, weekConfig)}${ex.role === 'appoint' ? ' <span class="exo-tag">appoint</span>' : ''}</div>
+          <button type="button" class="btn-info" data-guide="${id}"><span>Guider</span></button>
+        </div>
         <p class="exo-consigne">${ex.consigne}</p>
         <ul class="exo-points">${ex.points.map(p => `<li>${p}</li>`).join('')}</ul>
         ${ex.note ? `<p class="exo-note">${ex.note}</p>` : ''}
@@ -275,6 +279,12 @@ window.showExercises = (e, seanceId) => {
   document.getElementById('modal-body').scrollTop = 0
   document.getElementById('exercise-modal').classList.add('active')
 }
+
+// Bouton « Guider » d'un exercice : guide audio par-dessus le modal
+document.getElementById('modal-body').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-guide]')
+  if (btn) openGuide({ ids: [btn.dataset.guide], weekConfig: getWeekConfig(state.currentWeek) })
+})
 
 const closeModal = () => document.getElementById('exercise-modal').classList.remove('active')
 document.getElementById('close-modal').onclick = closeModal
