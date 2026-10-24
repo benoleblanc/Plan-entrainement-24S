@@ -1,5 +1,5 @@
 import './style.css'
-import { EXERCISES, PROGRESSION_RULE, REST_TEXT, SAFETY_RULES, getWeekConfig, setsLabel } from './plan.js'
+import { EXERCISES, PROGRESSION_RULE, REST_TEXT, SAFETY_RULES, getWeekConfig, pictoSrc, setsLabel } from './plan.js'
 import { openGuide } from './guide.js'
 
 // Configuration
@@ -260,7 +260,7 @@ window.showExercises = (e, seanceId) => {
     return `
       <article class="exo">
         <h4>${ex.name}</h4>
-        <img class="exo-picto" src="exercices/${id}.svg" alt="${ex.name}" loading="lazy">
+        <img class="exo-picto" src="${pictoSrc(id)}" alt="${ex.name}" loading="lazy">
         <div class="exo-bar">
           <div class="exo-sets">${setsLabel(ex, weekConfig)}${ex.role === 'appoint' ? ' <span class="exo-tag">appoint</span>' : ''}</div>
           <button type="button" class="btn-info" data-guide="${id}"><span>Guider</span></button>

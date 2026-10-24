@@ -14,6 +14,11 @@ export const SAFETY_RULES = [
   'Ces exercices sont généraux : fais-les valider par ton médecin ou un kinésiologue.'
 ]
 
+// Exercices illustrés par une photo (JPG) plutôt que par un dessin (SVG)
+const PHOTOS = ['assis-debout', 'developpe-couche-sol', 'marche-laterale', 'pont-fessier', 'rowing-elastique']
+
+export const pictoSrc = id => `exercices/${id}.${PHOTOS.includes(id) ? 'jpg' : 'svg'}`
+
 // role : 'principal' | 'appoint' (appoint = 2 séries maximum)
 // unite : 'series' (défaut) | 'passages'
 export const EXERCISES = {

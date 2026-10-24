@@ -1,6 +1,6 @@
 // Guide audio : voix du navigateur (speechSynthesis), comptage des répétitions, repos et encouragements
 
-import { EXERCISES, seriesFor } from './plan.js'
+import { EXERCISES, pictoSrc, seriesFor } from './plan.js'
 import { GUIDE } from './guide-data.js'
 
 const SETTINGS_KEY = 'guide_audio_reglages'
@@ -422,7 +422,7 @@ export function openGuide(opts) {
     target.innerHTML = ''
     if (!id) return
     const img = el('img')
-    img.src = `exercices/${id}.svg`
+    img.src = pictoSrc(id)
     img.alt = EXERCISES[id].name
     target.appendChild(img)
   }
