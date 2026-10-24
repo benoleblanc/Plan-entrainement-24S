@@ -7,9 +7,9 @@ const SETTINGS_KEY = 'guide_audio_reglages'
 const WORDS = ['zéro', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze']
 const ENCOURAGEMENTS = ['Bien joué', 'Beau contrôle', 'Continue comme ça', 'Très bien', 'Respire bien']
 const READY_TEXT = 'Expire pendant l\'effort. Prêt ? Trois, deux, un, on y va.'
-const SIDE_PAUSE_S = 5
 const WARMUP_S = 300
-const TRANSITION_S = 15
+const PREP_OPTIONS = [30, 60, 90] // préparation du matériel entre les exercices : secondes
+const SIDE_OPTIONS = [10, 20, 30] // changement de côté : secondes
 const ZONE2_RANGE = [20, 30]
 const COOLDOWN_RANGE = [3, 5]
 const BREATH_OPTIONS = [3, 5, 10] // respiration lente : minutes
@@ -22,7 +22,9 @@ const DEFAULT_SETTINGS = {
   voiceName: '',
   rate: 1,
   tempo: 1,
-  rest: 75,
+  rest: 75, // entre les séries et entre les exercices
+  prep: 60, // préparation du matériel avant un exercice (séance guidée)
+  side: 20, // changement de côté
   voiceOn: true,
   enc: true,
   beep: true,
@@ -278,6 +280,14 @@ const OVERLAY_HTML = `
         <span class="g-lbl">Repos entre les séries</span>
         <div class="g-seg" id="g-rest" role="group" aria-label="Repos entre les séries"></div>
       </div>
+      <div class="g-field" id="g-prep-field">
+        <span class="g-lbl">Préparation du matériel entre les exercices</span>
+        <div class="g-seg" id="g-prep" role="group" aria-label="Préparation du matériel entre les exercices"></div>
+      </div>
+      <div class="g-field" id="g-side-field">
+        <span class="g-lbl">Changement de côté</span>
+        <div class="g-seg" id="g-side-len" role="group" aria-label="Changement de côté"></div>
+      </div>
       <div class="g-field">
         <label for="g-tempo" class="g-lbl">Rythme : <output id="g-tempo-out"></output></label>
         <input type="range" id="g-tempo" min="0.7" max="1.5" step="0.1" value="1">
@@ -378,7 +388,7 @@ export function openGuide(opts) {
 
   const $ = id => overlay.querySelector('#g-' + id)
   const ui = {}
-  ;['title', 'close', 'setup', 'run', 'done', 'picto', 'picto-run', 'amount-title', 'amounts', 'rest', 'tempo', 'tempo-out',
+  ;['title', 'close', 'setup', 'run', 'done', 'picto', 'picto-run', 'amount-title', 'amounts', 'rest', 'prep', 'prep-field', 'side-len', 'side-field', 'tempo', 'tempo-out',
     'voice', 'voice-status', 'rate', 'rate-out', 'voice-test', 'opt-voice', 'opt-enc', 'opt-beep', 'desc', 'start',
     'run-ex', 'state', 'pos', 'set', 'side', 'count', 'of', 'cue', 'bar', 'skip', 'pause', 'stop', 'nav', 'prev', 'next',
     'said', 'done-title', 'done-text', 'again', 'complete', 'back',
@@ -433,6 +443,14 @@ export function openGuide(opts) {
     ui.start.textContent = 'Commencer'
   }
   ui['breath-card'].hidden = !session && !breathOnly // un exercice seul n'a pas de respiration finale
+  // Préparation du matériel : séance guidée seulement ; changement de côté : seulement si un exercice en a
+  ui['prep-field'].hidden = !session || ellipt
+  ui['side-field'].hidden = ellipt || breathOnly || !ids.some(id => GUIDE[id].sides)
+  if (session && !ellipt) {
+    const lbl = ui.rest.closest('.g-field').querySelector('.g-lbl')
+    lbl.textContent = 'Repos entre les séries et les exercices'
+    ui.rest.setAttribute('aria-label', lbl.textContent)
+  }
 
   // --- Réglages ---
   const segment = (container, items, current, onPick) => {
@@ -520,6 +538,8 @@ export function openGuide(opts) {
     const rests = [[60, '60 s'], [75, '75 s'], [90, '90 s']]
     if (TRIAL) rests.unshift([10, '10 s (essai)'])
     segment(ui.rest, rests, settings.rest, n => { settings.rest = n; saveSettings(); renderSettings() })
+    segment(ui.prep, PREP_OPTIONS.map(n => [n, `${n} s`]), settings.prep, n => { settings.prep = n; saveSettings(); renderSettings() })
+    segment(ui['side-len'], SIDE_OPTIONS.map(n => [n, `${n} s`]), settings.side, n => { settings.side = n; saveSettings(); renderSettings() })
     ui.tempo.value = settings.tempo
     ui['tempo-out'].textContent = tempoLabel()
     ui.tempo.disabled = ids.every(id => GUIDE[id].mode === 'hold')
@@ -616,6 +636,28 @@ export function openGuide(opts) {
     return true
   }
 
+  // Repos (entre les séries ou entre les exercices) : compte à rebours, avec « Passer » si skippable.
+  // Retourne false si interrompu.
+  const rest = async (r, text, skippable = false) => {
+    setState('Repos')
+    setCue('Respire, secoue les jambes')
+    speak(text)
+    const setSkippable = on => { r.skippable = on; r.onSkippable?.() }
+    if (skippable) setSkippable(true)
+    let skipped = false
+    for (let c = settings.rest; c > 0 && !skipped; c--) {
+      setCount(c, 's')
+      setBar(1 - c / settings.rest)
+      if (c === 10 && settings.rest > 12) speak('Dix secondes')
+      if (c <= 3) { speak(word(c)); beep(660, 0.1) }
+      if (!await sleep(1000, r)) { if (skippable) setSkippable(false); return false }
+      if (skippable && r.skip) { r.skip = false; skipped = true }
+    }
+    if (skippable) setSkippable(false)
+    if (!skipped) beep(990, 0.4)
+    return true
+  }
+
   // Un exercice complet : description, séries (avec côtés) et repos. Retourne false si interrompu.
   const guideExercise = async (r, id) => {
     const g = GUIDE[id]
@@ -662,7 +704,7 @@ export function openGuide(opts) {
             setState('Change de côté')
             setCue(capital(sides[k]))
             speak(`Change de côté. ${capital(sides[k])}.`)
-            if (!await countdown(r, SIDE_PAUSE_S, true)) return false
+            if (!await countdown(r, settings.side, true)) return false
           }
           if (dead(r)) return false
         }
@@ -672,18 +714,8 @@ export function openGuide(opts) {
         if (!ok) return false
       }
       if (s < N) {
-        setState('Repos')
-        setCue('Respire, secoue les jambes')
         ui.side.textContent = ''
-        speak(`Série terminée. Bravo. Repos, ${settings.rest} secondes.`)
-        for (let c = settings.rest; c > 0; c--) {
-          setCount(c, 's')
-          setBar(1 - c / settings.rest)
-          if (c === 10 && settings.rest > 12) speak('Dix secondes')
-          if (c <= 3) { speak(word(c)); beep(660, 0.1) }
-          if (!await sleep(1000, r)) return false
-        }
-        beep(990, 0.4)
+        if (!await rest(r, `Série terminée. Bravo. Repos, ${settings.rest} secondes.`)) return false
       }
     }
     return !dead(r)
@@ -889,13 +921,17 @@ export function openGuide(opts) {
     if (session && !await warmup(r)) return
 
     let i = 0
-    let lead = null // phrase de transition avant l'exercice i (aucune pour le premier)
+    // Phrase de préparation du matériel avant l'exercice i (séance guidée seulement)
+    const leadFor = (label) => (session && i < ids.length ? `${label} : ${EXERCISES[ids[i]].name}. Prépare le matériel.` : null)
+    let lead = leadFor('Premier exercice')
+    let restBefore = false // repos à prendre avant la préparation (exercice terminé normalement)
     const applyAction = () => {
       const a = r.exAction
       r.exAction = null
+      restBefore = false
       if (a === 'next') i++
       else if (a === 'prev') i = Math.max(0, i - 1)
-      lead = i < ids.length ? `Prochain exercice : ${EXERCISES[ids[i]].name}. Prépare le matériel.` : null
+      lead = leadFor('Prochain exercice')
     }
     while (i < ids.length) {
       showPosition(i)
@@ -903,7 +939,15 @@ export function openGuide(opts) {
       if (lead) {
         setPicto(ui['picto-run'], ids[i])
         ui['run-ex'].textContent = EXERCISES[ids[i]].name
-        await transition(r, lead, TRANSITION_S, 'Prépare le matériel')
+        ui.side.textContent = ''
+        ui.set.textContent = ''
+        if (restBefore) {
+          restBefore = false
+          await rest(r, `Exercice terminé. Bravo. Repos, ${settings.rest} secondes.`, true)
+          if (r.aborted) return
+          if (r.exAction) { applyAction(); continue }
+        }
+        await transition(r, lead, settings.prep, 'Prépare le matériel')
         if (r.aborted) return
         if (r.exAction) { applyAction(); continue }
       }
@@ -911,7 +955,8 @@ export function openGuide(opts) {
       if (r.aborted) return
       if (r.exAction) { applyAction(); continue }
       i++
-      lead = i < ids.length ? `Exercice terminé. Prochain exercice : ${EXERCISES[ids[i]].name}. Prépare le matériel.` : null
+      lead = leadFor('Prochain exercice')
+      restBefore = !!lead
     }
     if (r.aborted) return
     if (session && settings.breath && !await doBreath(r)) return
