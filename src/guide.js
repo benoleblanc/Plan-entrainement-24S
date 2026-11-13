@@ -1,6 +1,6 @@
 // Guide audio : voix du navigateur (speechSynthesis), comptage des répétitions, repos et encouragements
 
-import { EXERCISES, pictoSrc, seriesFor } from './plan.js'
+import { EXERCISES, halterLabel, halterSpoken, pictoSrc, seriesFor } from './plan.js'
 import { GUIDE } from './guide-data.js'
 
 const SETTINGS_KEY = 'guide_audio_reglages'
@@ -658,6 +658,9 @@ export function openGuide(opts) {
     return true
   }
 
+  // Nom de l'exercice, suivi des haltères à utiliser s'il y en a
+  const exTitle = ex => (halterLabel(ex) ? `${ex.name} · ${halterLabel(ex)}` : ex.name)
+
   // Un exercice complet : description, séries (avec côtés) et repos. Retourne false si interrompu.
   const guideExercise = async (r, id) => {
     const g = GUIDE[id]
@@ -666,7 +669,7 @@ export function openGuide(opts) {
     const A = amountOf(id)
     const hold = g.mode === 'hold'
 
-    ui['run-ex'].textContent = ex.name
+    ui['run-ex'].textContent = exTitle(ex)
     setPicto(ui['picto-run'], id)
     ui.side.textContent = ''
     setCount('', '')
@@ -922,7 +925,12 @@ export function openGuide(opts) {
 
     let i = 0
     // Phrase de préparation du matériel avant l'exercice i (séance guidée seulement)
-    const leadFor = (label) => (session && i < ids.length ? `${label} : ${EXERCISES[ids[i]].name}. Prépare le matériel.` : null)
+    const leadFor = (label) => {
+      if (!session || i >= ids.length) return null
+      const ex = EXERCISES[ids[i]]
+      const poids = halterSpoken(ex)
+      return `${label} : ${ex.name}. Prépare le matériel${poids ? ` : ${poids}` : ''}.`
+    }
     let lead = leadFor('Premier exercice')
     let restBefore = false // repos à prendre avant la préparation (exercice terminé normalement)
     const applyAction = () => {
@@ -938,7 +946,7 @@ export function openGuide(opts) {
       ui.nav.hidden = !session
       if (lead) {
         setPicto(ui['picto-run'], ids[i])
-        ui['run-ex'].textContent = EXERCISES[ids[i]].name
+        ui['run-ex'].textContent = exTitle(EXERCISES[ids[i]])
         ui.side.textContent = ''
         ui.set.textContent = ''
         if (restBefore) {

@@ -1,5 +1,5 @@
 import './style.css'
-import { EXERCISES, PROGRESSION_RULE, REST_TEXT, SAFETY_RULES, getWeekConfig, pictoSrc, setsLabel } from './plan.js'
+import { EXERCISES, PROGRESSION_RULE, REST_TEXT, SAFETY_RULES, getWeekConfig, halterLabel, pictoSrc, setsLabel } from './plan.js'
 import { openGuide } from './guide.js'
 
 // Configuration
@@ -265,6 +265,7 @@ window.showExercises = (e, seanceId) => {
           <div class="exo-sets">${setsLabel(ex, weekConfig)}${ex.role === 'appoint' ? ' <span class="exo-tag">appoint</span>' : ''}</div>
           <button type="button" class="btn-info" data-guide="${id}"><span>Guider</span></button>
         </div>
+        ${halterLabel(ex) ? `<p class="exo-poids">${halterLabel(ex)}</p>` : ''}
         <p class="exo-consigne">${ex.consigne}</p>
         <ul class="exo-points">${ex.points.map(p => `<li>${p}</li>`).join('')}</ul>
         ${ex.note ? `<p class="exo-note">${ex.note}</p>` : ''}

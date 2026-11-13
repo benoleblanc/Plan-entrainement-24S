@@ -21,6 +21,7 @@ export const pictoSrc = id => `exercices/${id}.${PHOTOS.includes(id) ? 'jpg' : '
 
 // role : 'principal' | 'appoint' (appoint = 2 séries maximum)
 // unite : 'series' (défaut) | 'passages'
+// haltere : { lb, max, nb } = poids de départ et poids maximal visé, en livres, de chaque haltère, et nombre d'haltères (à ajuster ici)
 export const EXERCISES = {
   'assis-debout': {
     name: 'Assis-debout depuis une chaise',
@@ -42,6 +43,7 @@ export const EXERCISES = {
     name: 'Soulevé de terre roumain aux haltères',
     reps: '8-12 rép.',
     role: 'principal',
+    haltere: { lb: 10, max: 20, nb: 2 },
     consigne: 'Debout, un haltère dans chaque main devant les cuisses, genoux légèrement fléchis et fixes. Pousse les hanches vers l\'arrière en gardant le dos plat, fais glisser les haltères le long des jambes (jusqu\'à mi-tibia ou tant que le dos reste plat), puis remonte en poussant les hanches vers l\'avant.',
     points: ['dos neutre, le mouvement vient des hanches, pas du dos', 'charges légères au début'],
     progression: 'augmenter doucement la charge (voir la règle de progression plus bas).'
@@ -90,6 +92,7 @@ export const EXERCISES = {
     name: 'Rowing à l\'haltère (ou à l\'élastique)',
     reps: '8-12 rép. par côté',
     role: 'principal',
+    haltere: { lb: 10, max: 20, nb: 1 },
     consigne: 'Debout, penché depuis les hanches, une main appuyée sur une chaise stable. Tire l\'haltère vers la hanche, coude près du corps, puis redescends lentement. Version élastique possible.',
     points: ['dos plat', 'tire avec le dos, pas avec le bras'],
     progression: 'haltère un peu plus lourd.'
@@ -106,6 +109,7 @@ export const EXERCISES = {
     name: 'Développé couché au sol aux haltères',
     reps: '8-12 rép.',
     role: 'principal',
+    haltere: { lb: 10, max: 20, nb: 2 },
     consigne: 'Couché sur le dos, genoux pliés, pieds à plat, haltères au-dessus de la poitrine. Descends les coudes jusqu\'à toucher le sol (environ 45° du corps), puis pousse.',
     points: ['expire en poussant', 'poignets droits'],
     progression: 'haltères un peu plus lourds.'
@@ -114,6 +118,7 @@ export const EXERCISES = {
     name: 'Développé d\'épaules assis aux haltères',
     reps: '8-12 rép.',
     role: 'principal',
+    haltere: { lb: 8, max: 15, nb: 2 },
     consigne: 'Assis sur une chaise, dos droit, haltères à hauteur des épaules. Pousse au-dessus de la tête sans cambrer, redescends lentement.',
     points: ['expire en poussant, <strong>ne jamais retenir son souffle</strong>', 'ventre légèrement contracté'],
     progression: 'haltères un peu plus lourds.'
@@ -139,6 +144,7 @@ export const EXERCISES = {
     reps: '30-40 s',
     unite: 'passages',
     role: 'principal',
+    haltere: { lb: 15, max: 22, nb: 2 },
     consigne: 'Un haltère dans chaque main, bras le long du corps, épaules basses et grande taille. Marche à pas réguliers.',
     points: ['posture droite', 'ne pas retenir son souffle'],
     progression: 'haltères un peu plus lourds, ou 40 s.'
@@ -183,6 +189,20 @@ export const EXERCISES = {
     points: ['ne pas creuser le dos', 'respirer normalement'],
     progression: '40 à 60 s.'
   }
+}
+
+// Haltères à utiliser (du poids de départ au poids maximal), ex. « 2 haltères de 10 à 20 lb » (null si l'exercice n'en demande pas)
+export function halterLabel(exercise) {
+  const h = exercise.haltere
+  if (!h) return null
+  return h.nb > 1 ? `${h.nb} haltères de ${h.lb} à ${h.max} lb` : `1 haltère de ${h.lb} à ${h.max} lb`
+}
+
+// Même chose pour la voix
+export function halterSpoken(exercise) {
+  const h = exercise.haltere
+  if (!h) return null
+  return h.nb > 1 ? `${h.nb} haltères de ${h.lb} à ${h.max} livres` : `1 haltère de ${h.lb} à ${h.max} livres`
 }
 
 export const SEANCES = {
